@@ -210,7 +210,6 @@ def main():
 
         labels = sample["labels"]
         labels = labels[labels != -100]
-        print(labels)
         print(tokenizer.decode(labels.tolist()))
         print("last checkpoint:", args.resume_from_checkpoint)
     trainer.train(resume_from_checkpoint=args.resume_from_checkpoint)
