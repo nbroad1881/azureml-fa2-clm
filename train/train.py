@@ -169,17 +169,18 @@ def main():
 
         return tokenized
 
-    ds = ds.map(format_text, num_proc=args.num_proc, desc="Formatting text")
+    with args.main_process_first(desc="dataset map formatting and tokenization"):
+        ds = ds.map(format_text, num_proc=args.num_proc, desc="Formatting text")
 
-    keep_cols = ["input_ids", "attention_mask", "labels"]
-    remove_cols = [x for x in ds["train"].column_names if x not in keep_cols]
-    ds = ds.map(
-        tokenize,
-        batched=True,
-        num_proc=args.num_proc,
-        desc="Tokenizing",
-        remove_columns=remove_cols,
-    )
+        keep_cols = ["input_ids", "attention_mask", "labels"]
+        remove_cols = [x for x in ds["train"].column_names if x not in keep_cols]
+        ds = ds.map(
+            tokenize,
+            batched=True,
+            num_proc=args.num_proc,
+            desc="Tokenizing",
+            remove_columns=remove_cols,
+        )
 
     data_collator = DataCollatorForTokenClassification(
         tokenizer, pad_to_multiple_of=16, max_length=args.max_seq_length
@@ -203,15 +204,15 @@ def main():
         eval_dtype=eval_dtype,
     )
 
-    # Show first example
-    sample = data_collator([ds["train"][0]])
+    if args.process_index == 0:
+        # Show first example
+        sample = data_collator([ds["train"][0]])
 
-    labels = sample["labels"]
-    labels = labels[labels != -100]
-    print(labels)
-    print(tokenizer.decode(labels.tolist()))
-
-    print("last checkpoint:", args.resume_from_checkpoint)
+        labels = sample["labels"]
+        labels = labels[labels != -100]
+        print(labels)
+        print(tokenizer.decode(labels.tolist()))
+        print("last checkpoint:", args.resume_from_checkpoint)
     trainer.train(resume_from_checkpoint=args.resume_from_checkpoint)
 
 
